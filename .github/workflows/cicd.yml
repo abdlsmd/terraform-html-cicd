@@ -38,3 +38,31 @@ jobs:
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
+
+  deploy-to-aws:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Deploy on AWS (pull + restart container)
+      uses: appleboy/ssh-action@v1.0.3
+      env:
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        GITHUB_SHA: ${{ github.sha }}
+      with:
+        host: ${{ secrets.AWS_HOST }}
+        username: ${{ secrets.AWS_USERNAME }}
+        key: ${{ secrets.AWS_SSH_KEY }}
+        port: ${{ secrets.AWS_SSH_PORT }}
+        envs: DOCKER_USERNAME,DOCKER_PASSWORD,GITHUB_SHA
+        script: |
+          set -e
+          echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+          SHORT_SHA="${GITHUB_SHA::7}"
+          IMAGE="$DOCKER_USERNAME/html-cicd:sha-$SHORT_SHA"
+
+          docker pull "$IMAGE"
+          docker rm -f html-cicd || true
+          docker run -d --name html-cicd -p 80:80 --restart unless-stopped "$IMAGE"
