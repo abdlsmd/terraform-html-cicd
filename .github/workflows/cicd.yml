@@ -54,7 +54,7 @@ jobs:
         host: ${{ secrets.AWS_HOST }}
         username: ${{ secrets.AWS_USERNAME }}
         key: ${{ secrets.AWS_SSH_KEY }}
-        port: ${{ secrets.AWS_SSH_PORT }}
+        port: ${{ secrets.AWS_SSH_PORT || '22' }}
         envs: DOCKER_USERNAME,DOCKER_PASSWORD,GITHUB_SHA
         script: |
           set -e
