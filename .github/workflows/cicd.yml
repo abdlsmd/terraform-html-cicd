@@ -64,5 +64,16 @@ jobs:
           IMAGE="$DOCKER_USERNAME/html-cicd:sha-$SHORT_SHA"
 
           docker pull "$IMAGE"
+
+          echo "Currently running containers:"
+          docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Ports}}" || true
+
+          # Free up port 80 if another container is already using it
+          EXISTING_80_CONTAINER_ID=$(docker ps --format '{{.ID}} {{.Ports}}' | awk '$0 ~ /(0\.0\.0\.0:80->|:::80->)/ {print $1; exit}')
+          if [ -n "${EXISTING_80_CONTAINER_ID:-}" ]; then
+            echo "Removing container bound to port 80: $EXISTING_80_CONTAINER_ID"
+            docker rm -f "$EXISTING_80_CONTAINER_ID" || true
+          fi
+
           docker rm -f html-cicd || true
           docker run -d --name html-cicd -p 80:80 --restart unless-stopped "$IMAGE"
